@@ -7,7 +7,7 @@ name = "coreason-installer"
 dynamic = ["version"]
 description = "A zero-dependency bootstrap helper for the CoReason Platform"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.14"
 authors = [
     { name = "CoReason, Inc.", email = "support@coreason.ai" }
 ]
