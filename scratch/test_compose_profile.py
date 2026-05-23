@@ -4,10 +4,10 @@ from pathlib import Path
 import os
 import yaml
 
-# Add src to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add package root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import compose_manager
+from coreason_installer import compose_manager
 
 def test_compose_profiles():
     print("Running compose profile tests...")

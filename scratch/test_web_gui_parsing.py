@@ -3,10 +3,10 @@ import sys
 from pathlib import Path
 import os
 
-# Add src to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add package root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import web_gui
+from coreason_installer import web_gui
 
 def test_parse_env_file():
     print("Running env parsing test...")

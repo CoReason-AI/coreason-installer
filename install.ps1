@@ -23,8 +23,8 @@ foreach ($arg in $args) {
 Set-Location $ScriptDir
 if ($LaunchWeb) {
     Write-Host "=== Bootstrapping CoReason Web Setup Dashboard ===" -ForegroundColor Cyan
-    uv run src/web_gui.py
+    uv run coreason_installer/web_gui.py
 } else {
     Write-Host "=== Bootstrapping CoReason CLI Installer ===" -ForegroundColor Cyan
-    uv run src/cli.py $args
+    uv run coreason_installer/cli.py $args
 }

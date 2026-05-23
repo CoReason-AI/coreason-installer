@@ -5,10 +5,10 @@ import json
 import base64
 from unittest.mock import patch, MagicMock
 
-# Add src to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add package root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import diagnostics
+from coreason_installer import diagnostics
 
 # The private key corresponding to the hardcoded public key in diagnostics.py
 PRIVATE_KEY_PEM = """-----BEGIN PRIVATE KEY-----

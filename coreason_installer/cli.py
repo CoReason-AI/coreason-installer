@@ -15,8 +15,8 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
 
-import diagnostics
-import compose_manager
+from . import diagnostics
+from . import compose_manager
 import json
 import time
 

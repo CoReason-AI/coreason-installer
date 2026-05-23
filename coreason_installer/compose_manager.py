@@ -253,7 +253,7 @@ def generate_env_file(
     extras = "inference" if gpu_detected else ""
     sglang_url = "http://sglang:30000" if gpu_detected else ""
 
-    import diagnostics
+    from . import diagnostics
     config = {
         "COMPOSE_PROFILES": profiles,
         "EXTRAS": extras,

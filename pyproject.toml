@@ -8,6 +8,19 @@ dynamic = ["version"]
 description = "A zero-dependency bootstrap helper for the CoReason Platform"
 readme = "README.md"
 requires-python = ">=3.9"
+authors = [
+    { name = "CoReason, Inc.", email = "support@coreason.ai" }
+]
+license = { text = "Prosperity Public License 3.0.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "click>=8.0.0",
     "rich>=12.0.0",
@@ -18,11 +31,11 @@ dependencies = [
 ]
 
 [project.scripts]
-coreason-install = "src.cli:main"
-coreason-web-gui = "src.web_gui:main"
+coreason-install = "coreason_installer.cli:main"
+coreason-web-gui = "coreason_installer.web_gui:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["coreason_installer"]
 
 [tool.hatch.version]
 source = "vcs"

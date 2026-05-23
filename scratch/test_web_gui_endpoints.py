@@ -4,10 +4,10 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch, MagicMock
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add package root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import web_gui
+from coreason_installer import web_gui
 
 class TestWebGuiEndpoints(unittest.TestCase):
     def setUp(self):
@@ -57,7 +57,7 @@ class TestWebGuiEndpoints(unittest.TestCase):
             self.test_dir.rmdir()
 
     @patch("subprocess.run")
-    @patch("compose_manager.handle_permissions")
+    @patch("coreason_installer.web_gui.compose_manager.handle_permissions")
     def test_install_endpoint_custom_params(self, mock_perms, mock_run):
         mock_perms.return_value = (True, "Mock permissions OK")
         
@@ -102,7 +102,7 @@ class TestWebGuiEndpoints(unittest.TestCase):
             "COREASON_VERIFICATION_KEY": params["verification_key"]
         }
         
-        import compose_manager
+        from coreason_installer import compose_manager
         compose_manager.prepare_directories(target_path, tenant_cid=params["tenant_cid"])
         compose_manager.copy_templates(target_path, template_dir, egress_profile="air-gapped", use_local_proxy=False)
         compose_manager.generate_env_file(target_path, template_dir, False, params["hf_token"], custom_vars=custom_vars)
@@ -143,7 +143,7 @@ class TestWebGuiEndpoints(unittest.TestCase):
             "COREASON_LICENSE_KEY": "jwt-new-key-value"
         }
         
-        import compose_manager
+        from coreason_installer import compose_manager
         compose_manager.generate_env_file(target_path, self.template_dir, False, "hf_dummy", custom_vars=custom_vars)
         
         new_config = web_gui.parse_env_file(env_path) or {}

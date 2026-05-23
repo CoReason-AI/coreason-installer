@@ -12,8 +12,8 @@ from typing import Any
 # Add parent directory to path so imports work
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import diagnostics
-import compose_manager
+from . import diagnostics
+from . import compose_manager
 
 def get_services_health(target_path: Path) -> dict[str, dict[str, Any]]:
     import subprocess

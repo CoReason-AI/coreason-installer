@@ -4,12 +4,10 @@ from pathlib import Path
 import json
 import unittest
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add package root to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import diagnostics
-import compose_manager
-import web_gui
+from coreason_installer import diagnostics, compose_manager, web_gui
 
 class TestInstallerUpgrades(unittest.TestCase):
     def setUp(self):
