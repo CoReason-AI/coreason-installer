@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "coreason-installer"
+dynamic = ["version"]
+description = "A zero-dependency bootstrap helper for the CoReason Platform"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0.0",
+    "rich>=12.0.0",
+    "cryptography>=41.0.0",
+    "psutil>=5.9.0",
+    "pyyaml>=6.0",
+    "canonicaljson>=2.0.0"
+]
+
+[project.scripts]
+coreason-install = "src.cli:main"
+coreason-web-gui = "src.web_gui:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+

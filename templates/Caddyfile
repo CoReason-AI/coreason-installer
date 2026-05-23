@@ -1,0 +1,20 @@
+{
+    # Global options
+    local_certs
+}
+
+# Bind to all interfaces (ports 80 and 443)
+:80, :443 {
+    # SSRF Protection
+    @ssrf_block {
+        header Host 169.254.169.254
+        header Host *127.0.0.*
+    }
+    respond @ssrf_block "SSRF Attempt Blocked" 403
+
+    # Enable local HTTPS via Caddy's internal CA
+    tls internal
+
+    # Reverse proxy to the CoReason API runtime
+    reverse_proxy coreason-runtime:8000
+}

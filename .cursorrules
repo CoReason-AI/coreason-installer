@@ -1,0 +1,7 @@
+# CoReason Root: Master Agentic Directive
+# This file enforces agent constraints and release protections across the CoReason workspace.
+
+# [ RELEASE BOUNDARY CONSTRAINTS FOR AGENTS ]
+# 1. NO REGISTRY PUSHES: You are mathematically forbidden from running commands that publish packages, charts, or images directly to registries (e.g., `npm publish`, `cargo publish`, `docker push`, `wash push`, `pypi publish`, `twine upload`). All releases/publishes must be triggered exclusively by pushing Git tags matching `v*.*.*` via manual administrative action.
+# 2. NO WORKFLOW EDITS: You MUST NOT modify files under the `.github/workflows/` directory or change CI/CD release triggers unless explicitly requested by the user and accompanied by manual override approval.
+# 3. VERSION CONSISTENCY: When updating package versions (e.g. in package.json, pyproject.toml, Cargo.toml), you must ensure they match the corresponding planned Git tag release name exactly.

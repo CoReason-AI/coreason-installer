@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# CoReason installer outputs (if run directly in the repository directory)
+.env
+certs/
+data/
+pg_data/

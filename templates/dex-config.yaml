@@ -1,0 +1,25 @@
+issuer: http://127.0.0.1:5556/dex
+storage:
+  type: memory
+web:
+  http: 0.0.0.0:5556
+logger:
+  level: debug
+  format: json
+oauth2:
+  skipApprovalScreen: true
+staticClients:
+- id: hyperscaler-vertex-ai
+  redirectURIs:
+  - 'http://127.0.0.1:8000/callback'
+  name: 'Vertex AI Agent'
+  secret: ZXhhbXBsZS1hcHAtc2VjcmV0
+- id: hyperscaler-aws-bedrock
+  redirectURIs:
+  - 'http://127.0.0.1:8000/callback'
+  name: 'AWS Bedrock Agent'
+  secret: YXdzLWJlZHJvY2stc2VjcmV0
+connectors:
+- type: mockCallback
+  id: mock
+  name: Mock

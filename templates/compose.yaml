@@ -1,0 +1,251 @@
+version: '3.9'
+
+services:
+  # Permission Initializer for Shared Volumes
+  init-permissions:
+    image: alpine:3.18
+    user: "0:0"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: ["chown", "-R", "10000:10000", "/app/data", "/app/logs"]
+
+  # Ingress & API Gateway (Caddy)
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "${COREASON_BIND_IP}:80:80"
+      - "${COREASON_BIND_IP}:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+      - sensory-gateway
+    depends_on:
+      coreason-runtime:
+        condition: service_healthy
+
+  # Identity Provider (Dex)
+  dex:
+    image: ghcr.io/dexidp/dex:v2.38.0
+    restart: unless-stopped
+    volumes:
+      - ./dex-config.yaml:/etc/dex/config.docker.yaml:ro
+    ports:
+      - "${COREASON_BIND_IP}:5556:5556"
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5556/healthz/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+      - sensory-gateway
+
+  # CoReason API Edge Server
+  coreason-runtime:
+    image: ghcr.io/coreason-ai/coreason-runtime:0.39.0
+    restart: unless-stopped
+    command: ["start", "api", "--port", "8000"]
+    ports:
+      - "${COREASON_BIND_IP}:8000:8000"
+    environment:
+      - SGLANG_URL=${SGLANG_URL}
+      - LANCEDB_URI=/app/data/lancedb
+      - PLUGINS_DIR=/app/data/plugins
+      - TELEMETRY_BROKER_URL=http://localhost:8000
+      - TEMPORAL_HOST=temporal:7233
+      - COREASON_MASTER_GATEWAY_URL=${COREASON_MASTER_GATEWAY_URL}
+      - COREASON_CA_BUNDLE=/app/certs/caddy/pki/authorities/local/root.crt
+      - EPISTEMIC_MERKLE_ROOT=${EPISTEMIC_MERKLE_ROOT}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    volumes:
+      - ./data/lancedb:/app/data/lancedb
+      - ./data/plugins:/app/data/plugins
+      - ./caddy_data:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+      - sensory-gateway
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # CoReason Temporal Worker
+  coreason-worker:
+    image: ghcr.io/coreason-ai/coreason-runtime:0.39.0
+    restart: unless-stopped
+    command: ["start", "node"]
+    environment:
+      - COREASON_TEMPORAL_HOST=temporal:7233
+      - EPISTEMIC_MERKLE_ROOT=${EPISTEMIC_MERKLE_ROOT}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    volumes:
+      - ./data/bronze:/app/data/bronze
+      - ./data/silver:/app/data/silver
+      - ./data/gold:/app/data/gold
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, sys; [sys.exit(0) for p in os.listdir('/proc') if p.isdigit() and int(p) != os.getpid() and 'node' in open(f'/proc/{p}/cmdline', errors='ignore').read()]; sys.exit(1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_healthy
+
+  # Temporal Orchestration Engine
+  temporal:
+    image: temporalio/auto-setup
+    restart: unless-stopped
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=
+      - POSTGRES_SEEDS=postgres
+      - BIND_ON_IP=0.0.0.0
+    ports:
+      - "${COREASON_BIND_IP}:7233:7233"
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - swarm-mesh
+
+  # PostgreSQL DB for Temporal State Store
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - swarm-mesh
+
+  # SGLang local GPU Cognitive Engine (Optional Profile)
+  sglang:
+    profiles:
+      - gpu
+    image: lmsysorg/sglang:latest
+    ports:
+      - "${COREASON_BIND_IP}:30000:30000"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: ["python3", "-m", "sglang.launch_server", "--model-path", "meta-llama/Meta-Llama-3-8B-Instruct", "--port", "30000", "--host", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:30000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - swarm-mesh
+
+  # CoReason Mesh Node (Contributes idle compute to public ledger & discovery)
+  coreason-mesh-node:
+    profiles:
+      - share-compute
+    image: ghcr.io/coreason-ai/coreason-urn-authority:0.39.0
+    restart: unless-stopped
+    command: ["start-daemon", "--tenant-cid", "${EPISTEMIC_MERKLE_ROOT}"]
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+
+  # OpenBao local secret store (Optional Profile)
+  vault:
+    profiles:
+      - vault
+    image: ghcr.io/openbao/openbao:2.0.0
+    restart: unless-stopped
+    ports:
+      - "${COREASON_BIND_IP}:8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=coreason-vault-token
+      - 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/file"}}, "listener": {"tcp": {"address": "0.0.0.0:8200", "tls_disable": 1}}}'
+    cap_add:
+      - IPC_LOCK
+    command: server
+    volumes:
+      - ./data/vault:/vault/file
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - swarm-mesh
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+
+
+networks:
+  swarm-mesh:
+    internal: true
+  sensory-gateway:
+    internal: true
+
+volumes:
+  pg_data:
