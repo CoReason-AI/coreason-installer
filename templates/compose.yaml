@@ -240,12 +240,22 @@ services:
       init-permissions:
         condition: service_completed_successfully
 
+  # Yjs Collaborative Sync Server (Node.js reference server)
+  yjs-sync:
+    image: node:18-alpine
+    restart: unless-stopped
+    command: ["npx", "y-websocket"]
+    environment:
+      - PORT=1234
+    networks:
+      - swarm-mesh
 
 networks:
   swarm-mesh:
     internal: true
   sensory-gateway:
     internal: true
+
 
 volumes:
   pg_data:

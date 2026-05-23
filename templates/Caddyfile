@@ -15,6 +15,13 @@
     # Enable local HTTPS via Caddy's internal CA
     tls internal
 
+    # Advertise HTTP/3 support
+    header Alt-Svc "h3=\":443\"; ma=2592000"
+
+    # Reverse proxy for Yjs collaborative synchronization WebSockets
+    reverse_proxy /ws/* yjs-sync:1234
+
     # Reverse proxy to the CoReason API runtime
     reverse_proxy coreason-runtime:8000
 }
+
