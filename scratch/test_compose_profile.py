@@ -4,8 +4,8 @@ from pathlib import Path
 import os
 import yaml
 
-# Add package root to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add src to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from coreason_installer import compose_manager
 

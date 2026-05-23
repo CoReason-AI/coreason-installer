@@ -35,7 +35,7 @@ coreason-install = "coreason_installer.cli:main"
 coreason-web-gui = "coreason_installer.web_gui:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["coreason_installer"]
+packages = ["src/coreason_installer"]
 
 [tool.hatch.version]
 source = "vcs"

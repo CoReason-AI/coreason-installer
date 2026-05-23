@@ -5,8 +5,8 @@ import json
 import base64
 from unittest.mock import patch, MagicMock
 
-# Add package root to the path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add src to the path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from coreason_installer import diagnostics
 

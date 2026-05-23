@@ -27,8 +27,8 @@ done
 cd "$SCRIPT_DIR"
 if [ "$LAUNCH_WEB" = true ]; then
     echo "=== Bootstrapping CoReason Web Setup Dashboard ==="
-    exec uv run coreason_installer/web_gui.py
+    exec uv run src/coreason_installer/web_gui.py
 else
     echo "=== Bootstrapping CoReason CLI Installer ==="
-    exec uv run coreason_installer/cli.py "$@"
+    exec uv run src/coreason_installer/cli.py "$@"
 fi
