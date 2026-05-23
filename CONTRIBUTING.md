@@ -90,4 +90,4 @@ To maintain cross-platform correctness:
    uv run ruff check src/
    ```
 2. **Cross-Platform Compatibility**: Always write platform-agnostic code. Use Python's `platform` and `shutil` libraries instead of hardcoded shell bindings (e.g. use `shutil.which` instead of `which`).
-3. **mTLS Integrity**: Do not bypass or disable mTLS certificate verification. The platform enforces strict token gating; all certificates generated in `certificates.py` must align with the target domains.
+3. **mTLS Integrity**: Do not bypass or disable mTLS certificate verification. The platform enforces strict token gating; all HTTPS certificates are managed and auto-generated via Caddy's PKI engine.

@@ -11,7 +11,7 @@ It handles host capability detection (NVIDIA GPUs & CDI device configurations), 
 Before running the installer, ensure you have:
 1. **Docker & Docker Compose** (installed and running).
 2. **NVIDIA Container Toolkit** (optional, required only for local GPU hardware acceleration).
-3. **Python 3.9+** (optional, the wrapper script will automatically bootstrap it via `uv` if missing).
+3. **Python 3.14+** (optional, the wrapper script will automatically bootstrap it via `uv` if missing).
 
 ---
 
