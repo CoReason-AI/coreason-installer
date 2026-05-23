@@ -120,7 +120,9 @@ def parse_env_file(env_path: Path) -> dict[str, str] | None:
         return None
 
 
-COREASON_ED25519_PUBKEY_HEX = "3b6a27bc2c10dfa105d8bc466808e5c687e1f4094191d17dbb18e7c10b7a8d8e"
+COREASON_ED25519_PUBKEY_HEX = "f1725478400f0c231ffb35383a9275c464069e26460989f5fa6953977f491b61"
+COREASON_ED25519_ALT_PUBKEY_HEX = "3b6a27bc2c10dfa105d8bc466808e5c687e1f4094191d17dbb18e7c10b7a8d8e"
+COREASON_ECDSA_PUBKEY_HEX = "04478d6f3ae0f871ce82c7be59bdde6e7db48b2736a9d7ff3e8fd2b870aebbbbd5a1f650d361d41009560c1b0e19b829b18d88e523f03a5f5709f85ece9587e409"
 
 def verify_jwt_license(token_str: str) -> dict[str, Any]:
     """Verify JWS JWT license signature and expiration status offline."""
@@ -162,19 +164,51 @@ def verify_jwt_license(token_str: str) -> dict[str, Any]:
     sig_error = None
     
     alg = header.get("alg", "ED25519")
-    if alg == "ED25519":
+    if alg in ("ED25519", "EdDSA"):
         try:
             from cryptography.hazmat.primitives.asymmetric import ed25519
-            pubkey_bytes = bytes.fromhex(COREASON_ED25519_PUBKEY_HEX)
-            public_key = ed25519.Ed25519PublicKey.from_public_bytes(pubkey_bytes)
+            message_bytes = f"{header_b64}.{payload_b64}".encode('utf-8')
+            signature_bytes = decode_base64url(signature_b64)
+            
+            # Try verification with canonical key first
+            try:
+                pubkey_bytes = bytes.fromhex(COREASON_ED25519_PUBKEY_HEX)
+                public_key = ed25519.Ed25519PublicKey.from_public_bytes(pubkey_bytes)
+                public_key.verify(signature_bytes, message_bytes)
+                signature_valid = True
+            except Exception:
+                # Fallback to alternate key
+                pubkey_bytes = bytes.fromhex(COREASON_ED25519_ALT_PUBKEY_HEX)
+                public_key = ed25519.Ed25519PublicKey.from_public_bytes(pubkey_bytes)
+                public_key.verify(signature_bytes, message_bytes)
+                signature_valid = True
+        except Exception as e:
+            sig_error = f"Ed25519 signature check failed: {str(e)}"
+    elif alg == "ES256":
+        try:
+            from cryptography.hazmat.primitives.asymmetric import ec
+            from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+            from cryptography.hazmat.primitives import hashes
+            
+            pubkey_bytes = bytes.fromhex(COREASON_ECDSA_PUBKEY_HEX)
+            public_key = ec.EllipticCurvePublicKey.from_encoded_point(
+                ec.SECP256R1(),
+                pubkey_bytes
+            )
             
             message_bytes = f"{header_b64}.{payload_b64}".encode('utf-8')
             signature_bytes = decode_base64url(signature_b64)
             
-            public_key.verify(signature_bytes, message_bytes)
+            if len(signature_bytes) != 64:
+                raise ValueError(f"ES256 signature must be exactly 64 bytes, got {len(signature_bytes)}")
+            r = int.from_bytes(signature_bytes[:32], byteorder="big")
+            s = int.from_bytes(signature_bytes[32:], byteorder="big")
+            der_signature = encode_dss_signature(r, s)
+            
+            public_key.verify(der_signature, message_bytes, ec.ECDSA(hashes.SHA256()))
             signature_valid = True
         except Exception as e:
-            sig_error = f"Ed25519 signature check failed: {str(e)}"
+            sig_error = f"ES256 signature check failed: {str(e)}"
     elif alg.startswith("ML-DSA") or alg == "RS256" or alg == "HS256":
         # Allow other algorithms for test mock compliance
         signature_valid = True

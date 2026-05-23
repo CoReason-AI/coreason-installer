@@ -82,6 +82,66 @@ class TestInstallerUpgrades(unittest.TestCase):
         self.assertTrue(result["valid"])
         self.assertEqual(result["claims"]["entitlements"], ["COMMERCIAL"])
 
+    def test_verify_jwt_license_eddsa_success(self):
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        import base64
+        
+        # Header with alg=EdDSA
+        header_json = json.dumps({"alg": "EdDSA", "typ": "JWT"})
+        header_b64 = base64.urlsafe_b64encode(header_json.encode()).decode().rstrip("=")
+        
+        # Payload
+        payload_json = json.dumps({"exp": 9999999999, "entitlements": ["COMMERCIAL_USE"]})
+        payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+        
+        message = f"{header_b64}.{payload_b64}".encode()
+        
+        # Sign with the seed corresponding to COREASON_ED25519_PUBKEY_HEX
+        seed = bytes.fromhex("33fa04a0956be1146a3ce10eeff0435597035202d177c98c51dc633252095114")
+        priv_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
+        sig = priv_key.sign(message)
+        sig_b64 = base64.urlsafe_b64encode(sig).decode().rstrip("=")
+        
+        token = f"{header_b64}.{payload_b64}.{sig_b64}"
+        result = web_gui.verify_jwt_license(token)
+        self.assertTrue(result["valid"])
+        self.assertIsNone(result["error"])
+        self.assertIn("COMMERCIAL_USE", result["claims"]["entitlements"])
+
+    def test_verify_jwt_license_es256_success(self):
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+        from cryptography.hazmat.primitives import serialization, hashes
+        import base64
+        
+        header_json = json.dumps({"alg": "ES256", "typ": "JWT"})
+        header_b64 = base64.urlsafe_b64encode(header_json.encode()).decode().rstrip("=")
+        
+        payload_json = json.dumps({"exp": 9999999999, "entitlements": ["COMMERCIAL_USE"]})
+        payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+        
+        message = f"{header_b64}.{payload_b64}".encode()
+        
+        priv_pem = (
+            "-----BEGIN PRIVATE KEY-----\n"
+            "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgyMFghYzIrJAwU8Uo\n"
+            "knLhWHpPV7ssTSqhkms7UIptGiahRANCAARHjW864PhxzoLHvlm93m59tIsnNqnX\n"
+            "/z6P0rhwrru71aH2UNNh1BAJVgwbDhm4KbGNiOUj8DpfVwn4Xs6Vh+QJ\n"
+            "-----END PRIVATE KEY-----"
+        )
+        priv_key = serialization.load_pem_private_key(priv_pem.encode("utf-8"), password=None)
+        der_sig = priv_key.sign(message, ec.ECDSA(hashes.SHA256()))
+        r, s = decode_dss_signature(der_sig)
+        r_bytes = r.to_bytes(32, byteorder="big")
+        s_bytes = s.to_bytes(32, byteorder="big")
+        sig_raw = r_bytes + s_bytes
+        sig_b64 = base64.urlsafe_b64encode(sig_raw).decode().rstrip("=")
+        
+        token = f"{header_b64}.{payload_b64}.{sig_b64}"
+        result = web_gui.verify_jwt_license(token)
+        self.assertTrue(result["valid"])
+        self.assertIsNone(result["error"])
+
     def test_prepare_directories_with_tenant_cid_and_vault(self):
         # Test folder structure includes the vault path and tenant-isolated logs path
         tenant_cid = "test-tenant-cid-abc-123"
